@@ -2,10 +2,10 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
-# ConfiguraciÛn de p·gina para MÛvil
+# Configuraci√≥n de p√°gina para M√≥vil
 st.set_page_config(page_title="Cotizador Luxury", layout="centered")
 
-# --- LISTA DE TELAS (ExtraÌdas de tu lista) ---
+# --- LISTA DE TELAS (Extra√≠das de tu lista) ---
 telas_lista = [
     "?.?. 500", "?.?. IPANEMA", "B.O. LONG BEACH", "B.O. LUXURY", "B.O. MONTREAL", 
     "B.O. SIDNEY", "B.O. BUDELLI", "BO TEXTURE", "BO OHIO", "DUO BASIC", 
@@ -19,27 +19,27 @@ telas_lista = [
 
 st.title("?? Cotizador Luxury HMG")
 
-# --- PANEL LATERAL: CONFIGURACI”N ---
+# --- PANEL LATERAL: CONFIGURACI√ìN ---
 with st.sidebar:
-    st.header("ConfiguraciÛn del Pedido")
+    st.header("Configuraci√≥n del Pedido")
     cliente = st.text_input("Nombre del Cliente")
     margen = st.number_input("Margen de Utilidad (%)", value=40.0)
-    instalacion = st.number_input("Costo InstalaciÛn ($)", value=0.0)
-    otros = st.number_input("Otros (Andamios/ComisiÛn)", value=0.0)
+    instalacion = st.number_input("Costo Instalaci√≥n ($)", value=0.0)
+    otros = st.number_input("Otros (Andamios/Comisi√≥n)", value=0.0)
 
-# --- PESTA—AS ---
-tab1, tab2 = st.tabs(["Nueva CotizaciÛn", "Historial"])
+# --- PESTA√ëAS ---
+tab1, tab2 = st.tabs(["Nueva Cotizaci√≥n", "Historial"])
 
 with tab1:
-    st.subheader("1. Cargar datos de F·brica")
-    archivo = st.file_uploader("Sube el Excel de F·brica", type=['xlsx', 'csv'])
+    st.subheader("1. Cargar datos de F√°brica")
+    archivo = st.file_uploader("Sube el Excel de F√°brica", type=['xlsx', 'csv'])
     
     if archivo:
         df = pd.read_excel(archivo) if archivo.name.endswith('xlsx') else pd.read_csv(archivo)
         st.write("Datos recibidos:")
         st.dataframe(df)
         
-        # LÛgica de c·lculo
+        # L√≥gica de c√°lculo
         # Asumimos que el Excel tiene una columna llamada 'Costo'
         if 'Costo' in df.columns:
             df['Precio Venta'] = df['Costo'] * (1 + (margen / 100))
@@ -49,19 +49,19 @@ with tab1:
             st.success(f"### Total Cliente Final: ${total_final:,.2f}")
             
             if st.button("Guardar y Generar PDF"):
-                # AquÌ se guardarÌa en el historial (Sheets)
+                # Aqu√≠ se guardar√≠a en el historial (Sheets)
                 st.info("Guardando en base de datos...")
-                # LÛgica simplificada de guardado
+                # L√≥gica simplificada de guardado
                 nuevo_registro = pd.DataFrame([{
                     "Fecha": datetime.now(),
                     "Cliente": cliente,
                     "Total": total_final,
                     "Utilidad %": margen
                 }])
-                st.write("Registro guardado con Èxito.")
+                st.write("Registro guardado con √©xito.")
         else:
             st.error("El archivo debe tener una columna llamada 'Costo'")
 
 with tab2:
     st.subheader("Historial de Ventas")
-    st.info("AquÌ aparecer·n todas tus cotizaciones guardadas en Google Sheets.")
+    st.info("Aqu√≠ aparecer√°n todas tus cotizaciones guardadas en Google Sheets.")
