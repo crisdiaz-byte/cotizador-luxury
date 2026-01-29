@@ -1,0 +1,5 @@
+{
+  "name": "Cotizador Pro Persianas",
+  "description": "Sistema avanzado de cotización de persianas con gestión de márgenes, costos indirectos y generación de PDF. Diseñado para integración con Google Sheets y visualización móvil-first.",
+  "requestFramePermissions": []
+}
