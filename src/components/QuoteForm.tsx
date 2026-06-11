@@ -6,7 +6,16 @@ import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 
 // --- CATÁLOGOS PREDEFINIDOS ---
-const TIPOS_PERSIANA = ['Enrollable', 'Sheer', 'Panel Japonés'];
+const TIPOS_PERSIANA = [
+  'Enrollable',
+  'Sheer',
+  'Panel Japonés',
+  'Cortina Pliegue Francés',
+  'Cortina Ondulado Perfecto',
+  'Cortina Ojillos',
+  'Toldo Vertical',
+  'Toldo Retráctil'
+];
 
 const TIPOS_TELA = ['Screen', 'Blackout', 'Traslúcida', 'Semitraslúcida'];
 
@@ -61,7 +70,6 @@ const UBICACIONES = [
   'Recámara 3',
   'Recámara 4',
   'Estudio',
-  'Oficina',
   'Baño Principal',
   'Baño 2',
   'Pasillo',
@@ -75,6 +83,9 @@ const UBICACIONES = [
   'Bodega',
   'Gimnasio',
   'Sala de TV',
+  'V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10',
+  'V11', 'V12', 'V13', 'V14', 'V15',
+  'Oficina 1', 'Oficina 2', 'Oficina 3', 'Oficina 4', 'Oficina 5',
   'Otro'
 ];
 
@@ -86,6 +97,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
   // --- Paso 1: Config ---
   const [clientName, setClientName] = useState('');
   const [markup, setMarkup] = useState(30);
+  const [cotizacionFecha, setCotizacionFecha] = useState(new Date().toISOString().split('T')[0]);
 
   // --- Paso 2: Medidas (Formato Columnas) ---
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
@@ -214,61 +226,114 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
     XLSX.writeFile(wb, `PreCotizacion_Fabrica_${clientName || 'Cliente'}.xlsx`);
   };
 
-  // --- Handler Paso 3: Cargar Excel de Fábrica (SIN IA - Instantáneo) ---
+  // --- Handler Paso 3: Cargar Excel, PDF o Imagen de Fábrica ---
   const handleFactoryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
     setIsLoading(true);
-    
-    const reader = new FileReader();
-    reader.onload = (event) => {
+
+    const fileExt = file.name.split('.').pop()?.toLowerCase();
+
+    // --- Excel: parseo instantáneo ---
+    if (fileExt === 'xlsx' || fileExt === 'xls') {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const data = new Uint8Array(event.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+          const items: FactoryItem[] = jsonData
+            .filter((row: any) => row['PRECIO'] || row['Precio'] || row['precio'])
+            .map((row: any, idx: number) => {
+              const precio = row['PRECIO'] || row['Precio'] || row['precio'] || 0;
+              const ubicacion = row['UBICACIÓN'] || row['Ubicación'] || row['ubicacion'] || row['UBICACION'] || '';
+              const tipoPersiana = row['T.PERSIANA'] || row['T. PERSIANA'] || row['Tipo Persiana'] || row['TIPO PERSIANA'] || '';
+              const modelo = row['MODELO'] || row['Modelo'] || '';
+              const color = row['COLOR'] || row['Color'] || '';
+              const ancho = row['ANCHO'] || row['Ancho'] || '';
+              const alto = row['ALTO'] || row['Alto'] || '';
+              const m2 = row['M2'] || row['m2'] || '';
+              const precioNum = typeof precio === 'string' ? parseFloat(precio.replace(/[$,]/g, '')) : precio;
+              const descripcion = `${tipoPersiana} ${modelo} - ${color} (${ancho}x${alto}) - ${ubicacion}`.trim();
+              return {
+                id: `f-${idx}-${Date.now()}`,
+                descripcion: descripcion || `Partida ${idx + 1}`,
+                costoBase: precioNum || 0,
+                medidas: m2 ? `${m2} m²` : `${ancho}x${alto}`,
+                ubicacion, tipoPersiana, modelo, color
+              };
+            });
+          setFactoryItems(items);
+        } catch (error) {
+          alert('Error al leer el Excel. Verifica que sea un archivo válido.');
+        }
+        setIsLoading(false);
+      };
+      reader.readAsArrayBuffer(file);
+      return;
+    }
+
+    // --- PDF o Imagen: usa Claude Vision API ---
+    if (fileExt === 'pdf' || ['jpg','jpeg','png','webp'].includes(fileExt || '')) {
       try {
-        const data = new Uint8Array(event.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-        
-        const items: FactoryItem[] = jsonData
-          .filter((row: any) => row['PRECIO'] || row['Precio'] || row['precio'])
-          .map((row: any, idx: number) => {
-            const precio = row['PRECIO'] || row['Precio'] || row['precio'] || 0;
-            const ubicacion = row['UBICACIÓN'] || row['Ubicación'] || row['ubicacion'] || row['UBICACION'] || '';
-            const tipoPersiana = row['T.PERSIANA'] || row['T. PERSIANA'] || row['Tipo Persiana'] || row['TIPO PERSIANA'] || '';
-            const modelo = row['MODELO'] || row['Modelo'] || '';
-            const color = row['COLOR'] || row['Color'] || '';
-            const ancho = row['ANCHO'] || row['Ancho'] || '';
-            const alto = row['ALTO'] || row['Alto'] || '';
-            const m2 = row['M2'] || row['m2'] || '';
-            
-            // Limpiar precio (quitar $, comas, etc.)
-            const precioNum = typeof precio === 'string' 
-              ? parseFloat(precio.replace(/[$,]/g, '')) 
-              : precio;
-            
-            const descripcion = `${tipoPersiana} ${modelo} - ${color} (${ancho}x${alto}) - ${ubicacion}`.trim();
-            
-            return {
-              id: `f-${idx}-${Date.now()}`,
-              descripcion: descripcion || `Partida ${idx + 1}`,
-              costoBase: precioNum || 0,
-              medidas: m2 ? `${m2} m²` : `${ancho}x${alto}`,
-              ubicacion,
-              tipoPersiana,
-              modelo,
-              color
-            };
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const base64 = (event.target?.result as string).split(',')[1];
+          const mediaType = file.type;
+
+          let messageContent: any[];
+          if (fileExt === 'pdf') {
+            messageContent = [
+              { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
+              { type: 'text', text: 'Extrae TODAS las partidas/productos de este documento de cotización de fábrica. Para cada partida devuelve: descripcion, precio (solo número), ubicacion, tipoPersiana, modelo, color. Responde SOLO con JSON array, sin texto adicional.' }
+            ];
+          } else {
+            messageContent = [
+              { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+              { type: 'text', text: 'Extrae TODAS las partidas/productos de esta imagen de cotización de fábrica. Para cada partida devuelve: descripcion, precio (solo número), ubicacion, tipoPersiana, modelo, color. Responde SOLO con JSON array, sin texto adicional.' }
+            ];
+          }
+
+          const response = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: 'claude-sonnet-4-20250514',
+              max_tokens: 2000,
+              messages: [{ role: 'user', content: messageContent }]
+            })
           });
-        
-        setFactoryItems(items);
-      } catch (error) {
-        console.error('Error al leer Excel:', error);
-        alert('Error al leer el archivo. Verifica que sea un Excel válido.');
+
+          const data = await response.json();
+          const text = data.content?.map((c: any) => c.text || '').join('');
+          const clean = text.replace(/```json|```/g, '').trim();
+          const parsed = JSON.parse(clean);
+
+          const items: FactoryItem[] = parsed.map((row: any, idx: number) => ({
+            id: `f-${idx}-${Date.now()}`,
+            descripcion: row.descripcion || `Partida ${idx + 1}`,
+            costoBase: parseFloat(String(row.precio || '0').replace(/[$,]/g, '')) || 0,
+            medidas: '',
+            ubicacion: row.ubicacion || '',
+            tipoPersiana: row.tipoPersiana || '',
+            modelo: row.modelo || '',
+            color: row.color || ''
+          }));
+          setFactoryItems(items);
+          setIsLoading(false);
+        };
+        reader.readAsDataURL(file);
+      } catch (err) {
+        alert('Error al leer el archivo con IA. Intenta con Excel.');
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    };
-    reader.readAsArrayBuffer(file);
+      return;
+    }
+
+    alert('Formato no soportado. Usa Excel (.xlsx), PDF o imagen (JPG/PNG).');
+    setIsLoading(false);
   };
 
   // --- Handlers Paso 4 ---
@@ -322,7 +387,9 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
     
     // Generar número de cotización
     const cotizacionNum = `HMGO${Date.now().toString().slice(-5)}`;
-    const fechaHoy = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: '2-digit' }).replace(' de ', '.').replace(' ', '.');
+    const fechaHoy = cotizacionFecha 
+      ? new Date(cotizacionFecha + 'T12:00:00').toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })
+      : new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' });
     
     // --- HEADER ---
     // Logo HMG (base64)
@@ -466,6 +533,23 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
     doc.text('Recibo a mi entera satisfacción los productos y/o servicios', 20, finalY + 82);
     doc.text('en este formato mencionados,', 20, finalY + 87);
 
+    // --- CONDICIONES COMERCIALES ---
+    const condY = finalY + 97;
+    doc.setFillColor(245, 247, 250);
+    doc.rect(15, condY, 180, 22, 'F');
+    doc.setDrawColor(200, 210, 220);
+    doc.rect(15, condY, 180, 22);
+    doc.setFontSize(7.5);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(60, 80, 120);
+    doc.text('CONDICIONES COMERCIALES:', 19, condY + 6);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(80, 80, 80);
+    doc.text('• Cotización válida por 90 días a partir de la fecha de emisión.', 19, condY + 12);
+    doc.text('• 70% de anticipo y 30% restante al término de la instalación.', 19, condY + 17);
+    doc.text('• Tiempo de entrega: 6 a 9 días hábiles después del pago del anticipo.', 19, condY + 22);
+    doc.setTextColor(0, 0, 0);
+
     doc.save(`Cotizacion_${cotizacionNum}_${clientName || 'Cliente'}.pdf`);
     
     // Datos para guardar
@@ -527,6 +611,10 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
             <input type="text" className="w-full p-2 bg-slate-50 border rounded-lg focus:ring-2 ring-blue-500" placeholder="Juan Pérez" value={clientName} onChange={e => setClientName(e.target.value)} />
           </div>
           <div>
+            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Fecha de Cotización</label>
+            <input type="date" className="w-full p-2 bg-slate-50 border rounded-lg focus:ring-2 ring-blue-500" value={cotizacionFecha} onChange={e => setCotizacionFecha(e.target.value)} />
+          </div>
+          <div>
             <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Margen de Utilidad ({markup}%)</label>
             <input type="range" min="0" max="150" step="5" className="w-full accent-blue-600" value={markup} onChange={e => setMarkup(Number(e.target.value))} />
           </div>
@@ -542,7 +630,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
         
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 p-4 bg-slate-50 rounded-xl mb-6 border border-slate-200">
           <div className="col-span-2 md:col-span-1">
-            <label className="text-[9px] font-bold text-slate-400 uppercase">Tipo Persiana</label>
+            <label className="text-[9px] font-bold text-slate-400 uppercase">Tipo</label>
             <select className="w-full p-2 text-sm border rounded-lg bg-white" value={currentMeasure.tipoPersiana} onChange={e => setCurrentMeasure({...currentMeasure, tipoPersiana: e.target.value})}>
               <option value="">Seleccionar...</option>
               {TIPOS_PERSIANA.map(tipo => <option key={tipo} value={tipo}>{tipo}</option>)}
@@ -645,11 +733,16 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
           Costos de Fábrica
         </h3>
         <div className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center bg-slate-50 relative hover:border-purple-400 transition-colors">
-          <input type="file" accept=".xlsx,.xls" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFactoryUpload} />
-          <p className="text-slate-500 text-sm">Carga el presupuesto recibido de fábrica</p>
-          <p className="text-[10px] text-slate-400 mt-1 uppercase">Archivo Excel (.xlsx)</p>
+          <input type="file" accept=".xlsx,.xls,.pdf,.jpg,.jpeg,.png,.webp" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFactoryUpload} />
+          <p className="text-slate-500 text-sm font-medium">Carga el presupuesto recibido de fábrica</p>
+          <p className="text-[10px] text-slate-400 mt-1 uppercase">Excel (.xlsx) · PDF · Imagen (JPG/PNG)</p>
+          <div className="flex justify-center gap-3 mt-3">
+            <span className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold">📊 Excel</span>
+            <span className="text-[10px] bg-red-100 text-red-700 px-2 py-1 rounded-full font-bold">📄 PDF</span>
+            <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-bold">🖼️ Imagen</span>
+          </div>
         </div>
-        {isLoading && <div className="mt-4 text-purple-600 text-xs font-bold animate-pulse text-center">Procesando Excel...</div>}
+        {isLoading && <div className="mt-4 text-purple-600 text-xs font-bold animate-pulse text-center">⏳ Procesando archivo con IA...</div>}
         
         {factoryItems.length > 0 && (
           <div className="mt-4">
