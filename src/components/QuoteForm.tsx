@@ -354,16 +354,15 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
   // --- Handlers Paso 4 ---
   const addItemToQuote = (item: FactoryItem) => {
     const precioVenta = item.costoBase * (1 + markup / 100);
-    // Buscar medida correspondiente por ubicación
     const matchedM = measurements.find(m => m.ubicacion === item.ubicacion);
     const newItem: QuoteItem = { 
       ...item, 
       id: `q-${Date.now()}-${item.id}`, 
       cantidad: 1, 
       precioVenta,
-      tipoTela: matchedM?.tipoTela || (item as any).tipoTela || '',
-      nombreTela: matchedM?.nombreTela || (item as any).nombreTela || '',
-      ladoMecanismo: matchedM?.ladoMecanismo || 'Derecho',
+      tipoTela: (item as any).tipoTela || matchedM?.tipoTela || '',
+      nombreTela: (item as any).nombreTela || matchedM?.nombreTela || '',
+      ladoMecanismo: (item as any).ladoMecanismo || matchedM?.ladoMecanismo || 'Derecho',
       color: item.color || matchedM?.color || ''
     } as any;
     setSelectedItems(prev => [...prev, newItem]);
@@ -378,9 +377,9 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
         id: `q-${Date.now()}-${item.id}`, 
         cantidad: 1, 
         precioVenta,
-        tipoTela: matchedM?.tipoTela || (item as any).tipoTela || '',
-        nombreTela: matchedM?.nombreTela || (item as any).nombreTela || '',
-        ladoMecanismo: matchedM?.ladoMecanismo || 'Derecho',
+        tipoTela: (item as any).tipoTela || matchedM?.tipoTela || '',
+        nombreTela: (item as any).nombreTela || matchedM?.nombreTela || '',
+        ladoMecanismo: (item as any).ladoMecanismo || matchedM?.ladoMecanismo || 'Derecho',
         color: item.color || matchedM?.color || ''
       } as any;
     });
@@ -921,14 +920,48 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
                 Agregar Todas
               </Button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {factoryItems.map(item => (
-                <div key={item.id} className="p-3 border rounded-lg flex justify-between items-center bg-white shadow-sm">
-                  <div className="flex-1 overflow-hidden pr-2">
-                    <p className="text-xs font-bold truncate">{item.descripcion}</p>
-                    <p className="text-[10px] text-slate-400 font-medium">Costo: ${item.costoBase.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</p>
+            <div className="space-y-3">
+              {factoryItems.map((item, idx) => (
+                <div key={item.id} className="p-3 border rounded-lg bg-white shadow-sm">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="text-xs font-bold">{item.descripcion}</p>
+                      <p className="text-[10px] text-slate-400">Costo: ${item.costoBase.toLocaleString('es-MX', { minimumFractionDigits: 2 })} · {item.ubicacion}</p>
+                    </div>
+                    <Button variant="secondary" className="h-7 px-3 text-[10px] shrink-0 ml-2" onClick={() => addItemToQuote(item)}>Agregar</Button>
                   </div>
-                  <Button variant="secondary" className="h-7 px-3 text-[10px]" onClick={() => addItemToQuote(item)}>Agregar</Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Tipo Tela</label>
+                      <select
+                        className="w-full p-1.5 text-xs border rounded-lg bg-slate-50"
+                        value={(item as any).tipoTela || ''}
+                        onChange={e => {
+                          const updated = [...factoryItems];
+                          (updated[idx] as any).tipoTela = e.target.value;
+                          setFactoryItems(updated);
+                        }}
+                      >
+                        <option value="">Seleccionar...</option>
+                        {TIPOS_TELA.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[9px] font-bold text-slate-400 uppercase block mb-1">Nombre Tela</label>
+                      <select
+                        className="w-full p-1.5 text-xs border rounded-lg bg-slate-50"
+                        value={(item as any).nombreTela || ''}
+                        onChange={e => {
+                          const updated = [...factoryItems];
+                          (updated[idx] as any).nombreTela = e.target.value;
+                          setFactoryItems(updated);
+                        }}
+                      >
+                        <option value="">Seleccionar...</option>
+                        {NOMBRES_TELA.map(n => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
