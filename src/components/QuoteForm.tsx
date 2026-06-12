@@ -521,39 +521,39 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
     doc.setFontSize(9);
     doc.setFont(undefined, 'normal');
     doc.text('SUBTOTAL', totalsX, finalY + 5);
-    doc.text(\`$\${subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}\`, totalsVal, finalY + 5, { align: 'right' });
+    doc.text(`$${subtotal.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, totalsVal, finalY + 5, { align: 'right' });
     
-    doc.text(\`DESCUENTO (\${descuentoPct}%)\`, totalsX, finalY + 12);
+    doc.text(`DESCUENTO (${descuentoPct}%)`, totalsX, finalY + 12);
     doc.setTextColor(200, 0, 0);
-    doc.text(\`-$\${descuento.toLocaleString('es-MX', { minimumFractionDigits: 2 })}\`, totalsVal, finalY + 12, { align: 'right' });
+    doc.text(`-$${descuento.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, totalsVal, finalY + 12, { align: 'right' });
     doc.setTextColor(0, 0, 0);
     
     doc.text('SUBTOTAL', totalsX, finalY + 19);
-    doc.text(\`$\${sub.toLocaleString('es-MX', { minimumFractionDigits: 2 })}\`, totalsVal, finalY + 19, { align: 'right' });
+    doc.text(`$${sub.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, totalsVal, finalY + 19, { align: 'right' });
     
     if (viaticos > 0) {
       doc.text('VIÁTICOS', totalsX, finalY + 26);
-      doc.text(\`$\${viaticos.toLocaleString('es-MX', { minimumFractionDigits: 2 })}\`, totalsVal, finalY + 26, { align: 'right' });
+      doc.text(`$${viaticos.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, totalsVal, finalY + 26, { align: 'right' });
     }
     
     const ivaY = finalY + (viaticos > 0 ? 33 : 26);
     doc.text('IVA (16%)', totalsX, ivaY);
-    doc.text(\`$\${iva16.toLocaleString('es-MX', { minimumFractionDigits: 2 })}\`, totalsVal, ivaY, { align: 'right' });
+    doc.text(`$${iva16.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, totalsVal, ivaY, { align: 'right' });
     
     doc.setFillColor(220, 235, 250);
     doc.rect(totalsX - 2, ivaY + 3, totalsVal - totalsX + 4, 9, 'F');
     doc.setFont(undefined, 'bold');
     doc.setFontSize(10);
     doc.text('TOTAL CON IVA', totalsX, ivaY + 9);
-    doc.text(\`$\${totalConIVA.toLocaleString('es-MX', { minimumFractionDigits: 2 })}\`, totalsVal, ivaY + 9, { align: 'right' });
+    doc.text(`$${totalConIVA.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, totalsVal, ivaY + 9, { align: 'right' });
     doc.setFont(undefined, 'normal');
     doc.setFontSize(9);
     
     doc.text('ANTICIPO (70%)', totalsX, ivaY + 18);
-    doc.text(\`$\${(totalConIVA * 0.7).toLocaleString('es-MX', { minimumFractionDigits: 2 })}\`, totalsVal, ivaY + 18, { align: 'right' });
+    doc.text(`$${(totalConIVA * 0.7).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, totalsVal, ivaY + 18, { align: 'right' });
     
     doc.text('SALDO (30%)', totalsX, ivaY + 25);
-    doc.text(\`$\${(totalConIVA * 0.3).toLocaleString('es-MX', { minimumFractionDigits: 2 })}\`, totalsVal, ivaY + 25, { align: 'right' });
+    doc.text(`$${(totalConIVA * 0.3).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, totalsVal, ivaY + 25, { align: 'right' });
     
     // Calcular posición dinámica para firma
     const ivaYRef = finalY + (viaticos > 0 ? 33 : 26);
