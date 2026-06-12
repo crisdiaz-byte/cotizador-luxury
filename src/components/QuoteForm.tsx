@@ -252,21 +252,30 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
             .map((row: any, idx: number) => {
               const precio = row['PRECIO'] || row['Precio'] || row['precio'] || 0;
               const ubicacion = row['UBICACIÓN'] || row['Ubicación'] || row['ubicacion'] || row['UBICACION'] || '';
-              const tipoPersiana = row['T.PERSIANA'] || row['T. PERSIANA'] || row['Tipo Persiana'] || row['TIPO PERSIANA'] || '';
-              const modelo = row['MODELO'] || row['Modelo'] || '';
+              const tipoPersiana = row['Tipo Persiana'] || row['T.PERSIANA'] || row['T. PERSIANA'] || row['TIPO PERSIANA'] || '';
+              const tipoTela = row['Tipo Tela'] || row['TIPO TELA'] || row['tipo_tela'] || '';
+              const nombreTela = row['Nombre Tela'] || row['NOMBRE TELA'] || row['nombre_tela'] || row['MODELO'] || row['Modelo'] || '';
+              const modelo = nombreTela;
               const color = row['COLOR'] || row['Color'] || '';
+              const mecanismo = row['Mecanismo'] || row['MECANISMO'] || row['mecanismo'] || 'Derecho';
               const ancho = row['ANCHO'] || row['Ancho'] || '';
               const alto = row['ALTO'] || row['Alto'] || '';
-              const m2 = row['M2'] || row['m2'] || '';
+              const m2 = row['M2'] || row['MT2'] || row['m2'] || '';
               const precioNum = typeof precio === 'string' ? parseFloat(precio.replace(/[$,]/g, '')) : precio;
-              const descripcion = `${tipoPersiana} ${modelo} - ${color} (${ancho}x${alto}) - ${ubicacion}`.trim();
+              const descripcion = `${tipoPersiana} ${nombreTela} - ${color} - ${ubicacion}`.trim();
               return {
                 id: `f-${idx}-${Date.now()}`,
                 descripcion: descripcion || `Partida ${idx + 1}`,
                 costoBase: precioNum || 0,
                 medidas: m2 ? `${m2} m²` : `${ancho}x${alto}`,
-                ubicacion, tipoPersiana, modelo, color
-              };
+                ubicacion,
+                tipoPersiana,
+                tipoTela,
+                nombreTela,
+                modelo,
+                color,
+                ladoMecanismo: mecanismo
+              } as any;
             });
           setFactoryItems(items);
         } catch (error) {
