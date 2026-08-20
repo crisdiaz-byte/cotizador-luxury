@@ -380,7 +380,8 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
 
   // --- Handlers Paso 4 ---
   const addItemToQuote = (item: FactoryItem) => {
-    const precioVenta = item.costoBase * (1 + markup / 100);
+    // Precio inicial = costo fábrica (se recalculará con la fórmula correcta al generar PDF)
+    const precioVenta = item.costoBase;
     const matchedM = measurements.find(m => m.ubicacion === item.ubicacion);
     const newItem: QuoteItem = { 
       ...item, 
@@ -397,7 +398,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
 
   const addAllItemsToQuote = () => {
     const newItems = factoryItems.map(item => {
-      const precioVenta = item.costoBase * (1 + markup / 100);
+      const precioVenta = item.costoBase;
       const matchedM = measurements.find(m => m.ubicacion === item.ubicacion);
       return { 
         ...item, 
@@ -431,17 +432,24 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
     return selectedItems.reduce((acc, item) => acc + (item.costoBase * item.cantidad), 0);
   };
 
-  // Subtotal con extras
-  const subtotalConExtras = calculateSubtotal() + totalExtras;
-  
-  // Monto de descuento
-  const descuentoMonto = subtotalConExtras * (descuentoPct / 100);
-  
-  // Total final = subtotal + extras - descuento + viáticos
-  const totalFinal = subtotalConExtras - descuentoMonto + viaticos;
-  
-  // Utilidad = Total venta productos - Costo fábrica - descuento
-  const totalProfit = calculateSubtotal() - calculateTotalFactoryCost() - descuentoMonto;
+  // Total costos = Fábrica + Instalación + Andamios + Comisiones + Viáticos
+  const totalCostos = calculateTotalFactoryCost() + totalExtras + viaticos;
+
+  // Precio al cliente = Total costos ÷ (1 - % utilidad)
+  const subtotalCliente = markup < 100 ? totalCostos / (1 - markup / 100) : totalCostos * 2;
+  const subtotalConExtras = subtotalCliente; // compatibilidad
+
+  // Precio por partida (distribuido proporcionalmente al costo de fábrica)
+  const totalFabrica = calculateTotalFactoryCost();
+
+  // Descuento sobre precio al cliente
+  const descuentoMonto = subtotalCliente * (descuentoPct / 100);
+
+  // Total al cliente = Precio - Descuento
+  const totalFinal = subtotalCliente - descuentoMonto;
+
+  // Utilidad neta = Total al cliente - Total costos
+  const totalProfit = totalFinal - totalCostos;
 
   const generateFinalPDF = async () => {
     setIsGenerating(true);
@@ -488,9 +496,13 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
     doc.line(15, 42, 195, 42);
     
     // --- TABLA DE PRODUCTOS ---
+    const totalFabricaPDF = calculateTotalFactoryCost();
     const tableData = selectedItems.map((item, idx) => {
-      const basePrice = item.precioVentaManual !== undefined ? item.precioVentaManual : item.precioVenta;
-      const priceWithExtras = basePrice + extraPerItem;
+      // Precio por partida proporcional al costo de fábrica
+      const proporcion = totalFabricaPDF > 0 ? item.costoBase / totalFabricaPDF : 1 / selectedItems.length;
+      const precioPartida = item.precioVentaManual !== undefined 
+        ? item.precioVentaManual 
+        : subtotalCliente * proporcion;
       
       // Extraer datos del item — buscar en measurements si no viene del item directamente
       const ubicacion = (item as any).ubicacion || '-';
@@ -512,7 +524,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
         nombreTela,
         color,
         mecanismo,
-        `$${priceWithExtras.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
+        `$${precioPartida.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`
       ];
     });
 
@@ -547,7 +559,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
     const finalY = (doc as any).lastAutoTable.finalY + 5;
     
     // --- TOTALES ---
-    const subtotal = subtotalConExtras;
+    const subtotal = subtotalCliente;
     const descuento = descuentoMonto;
     const sub = subtotal - descuento;
     
@@ -720,7 +732,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
 
     const partidas = selectedItems.map((item, idx) => {
       const basePrice = item.precioVentaManual !== undefined ? item.precioVentaManual : item.precioVenta;
-      const priceWithExtras = basePrice + extraPerItem;
+      // Cliente no ve extras internos
       return {
         'No': idx + 1,
         'Ubicación': (item as any).ubicacion || '',
@@ -729,9 +741,9 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
         'Nombre Tela': (item as any).nombreTela || (item as any).modelo || '',
         'Color': (item as any).color || '',
         'Mecanismo': (item as any).ladoMecanismo || 'Derecho',
-        'Precio Unitario': priceWithExtras,
+        'Precio Unitario': basePrice,
         'Cantidad': item.cantidad,
-        'Subtotal': priceWithExtras * item.cantidad
+        'Subtotal': basePrice * item.cantidad
       };
     });
 
