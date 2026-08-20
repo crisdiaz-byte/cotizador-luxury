@@ -292,44 +292,42 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
       try {
         const reader = new FileReader();
         reader.onload = async (event) => {
-          try {
-            let base64: string;
-            let mediaType: string;
+          let base64: string;
+          let mediaType: string;
 
-            // Comprimir imagen si es mayor a 1MB
-            if (fileExt !== 'pdf' && file.size > 1 * 1024 * 1024) {
-              const img = new Image();
-              img.src = event.target?.result as string;
-              await new Promise(resolve => { img.onload = resolve; });
-              const canvas = document.createElement('canvas');
-              const maxW = 1200;
-              const scale = Math.min(1, maxW / img.width);
-              canvas.width = img.width * scale;
-              canvas.height = img.height * scale;
-              canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-              const compressed = canvas.toDataURL('image/jpeg', 0.7);
-              base64 = compressed.split(',')[1];
-              mediaType = 'image/jpeg';
-            } else {
-              base64 = (event.target?.result as string).split(',')[1];
-              mediaType = file.type || (fileExt === 'pdf' ? 'application/pdf' : 'image/jpeg');
-            }
+          // Comprimir imagen si es mayor a 1MB
+          if (fileExt !== 'pdf' && file.size > 1 * 1024 * 1024) {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            await new Promise(resolve => { img.onload = resolve; });
+            const canvas = document.createElement('canvas');
+            const maxW = 1200;
+            const scale = Math.min(1, maxW / img.width);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const compressed = canvas.toDataURL('image/jpeg', 0.7);
+            base64 = compressed.split(',')[1];
+            mediaType = 'image/jpeg';
+          } else {
+            base64 = (event.target?.result as string).split(',')[1];
+            mediaType = file.type || (fileExt === 'pdf' ? 'application/pdf' : 'image/jpeg');
+          }
 
           let messageContent: any[];
-            if (fileExt === 'pdf') {
-              messageContent = [
-                { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
-                { type: 'text', text: 'Extrae TODAS las partidas/productos de este documento de cotización de fábrica. Para cada partida devuelve: descripcion, precio (solo número sin símbolos), ubicacion, tipoPersiana, modelo, color. Responde SOLO con un JSON array válido, sin texto adicional ni markdown.' }
-              ];
-            } else {
-              messageContent = [
-                { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-                { type: 'text', text: 'Extrae TODAS las partidas/productos de esta imagen de cotización de fábrica. Para cada partida devuelve: descripcion, precio (solo número sin símbolos), ubicacion, tipoPersiana, modelo, color. Responde SOLO con un JSON array válido, sin texto adicional ni markdown.' }
-              ];
-            }
+          if (fileExt === 'pdf') {
+            messageContent = [
+              { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64 } },
+              { type: 'text', text: 'Extrae TODAS las partidas/productos de este documento de cotización de fábrica. Para cada partida devuelve: descripcion, precio (solo número sin símbolos), ubicacion, tipoPersiana, modelo, color. Responde SOLO con un JSON array válido, sin texto adicional ni markdown.' }
+            ];
+          } else {
+            messageContent = [
+              { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+              { type: 'text', text: 'Extrae TODAS las partidas/productos de esta imagen de cotización de fábrica. Para cada partida devuelve: descripcion, precio (solo número sin símbolos), ubicacion, tipoPersiana, modelo, color. Responde SOLO con un JSON array válido, sin texto adicional ni markdown.' }
+            ];
+          }
 
           try {
-            // Llamada via Netlify Function (evita CORS)
             const response = await fetch('/.netlify/functions/claude-proxy', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
