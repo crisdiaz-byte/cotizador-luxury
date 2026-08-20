@@ -654,10 +654,12 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
     doc.text('www.persianasenqueretaro.mx', 105, contactY + 12, { align: 'center' });
     doc.setTextColor(0, 0, 0);
 
-    // Guardar PDF como base64
-    const pdfBase64 = doc.output('datauristring');
+    // Guardar PDF y descargar inmediatamente
     const filename = `Cotizacion_${cotizacionNum}_${clientName || 'Cliente'}.pdf`;
     doc.save(filename);
+    
+    // Generar base64 por separado (para Drive) - sin bloquear la UI
+    const pdfBase64 = doc.output('datauristring');
     
     // Datos para guardar en historial
     const costoFabrica = calculateTotalFactoryCost();
@@ -671,24 +673,24 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
       markupAplicado: markup,
       items: selectedItems.length,
       cotizacionNum,
-      filename,
-      pdfBase64
+      filename
     };
     
-    // Guardar en localStorage
+    // Guardar en localStorage (sin el PDF para no saturar)
     try {
       const existing = JSON.parse(localStorage.getItem('hmg_cotizaciones') || '[]');
       existing.unshift(historyEntry);
-      // Guardar máximo 50 cotizaciones
       localStorage.setItem('hmg_cotizaciones', JSON.stringify(existing.slice(0, 50)));
     } catch (e) {
       console.error('Error guardando en localStorage:', e);
     }
     
     onSaveHistory(historyEntry);
+    setIsGenerating(false); // Liberar UI inmediatamente
     
-    // Enviar a Google Sheets (Apps Script: sube PDF a Drive + escribe fila)
-    try {
+    // Enviar a Google Sheets en segundo plano (no bloquea)
+    const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
+    if (GOOGLE_SCRIPT_URL) {
       const sheetData = {
         fecha: new Date().toLocaleDateString('es-MX'),
         cliente: clientName || 'Sin Nombre',
@@ -702,21 +704,13 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
         pdfBase64: pdfBase64
       };
       
-      const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL;
-      
-      if (GOOGLE_SCRIPT_URL) {
-        fetch(GOOGLE_SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(sheetData)
-        });
-      }
-    } catch (error) {
-      console.error('Error enviando a Google Sheets:', error);
+      fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sheetData)
+      }).catch(err => console.error('Error enviando a Sheets:', err));
     }
-    
-    setIsGenerating(false);
   };
 
   const generateExcel = () => {
