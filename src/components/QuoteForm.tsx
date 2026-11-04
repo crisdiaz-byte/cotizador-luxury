@@ -334,9 +334,15 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
               body: JSON.stringify({ messages: [{ role: 'user', content: messageContent }] })
             });
 
-            if (!response.ok) throw new Error(`Error ${response.status}`);
+            if (!response.ok) {
+              const detalle = await response.text().catch(() => '');
+              throw new Error(`HTTP ${response.status} ${detalle.slice(0, 200)}`);
+            }
 
             const data = await response.json();
+            if (data.error) {
+              throw new Error(typeof data.error === 'string' ? data.error : (data.error.message || JSON.stringify(data.error)));
+            }
             const text = data.content?.map((c: any) => c.text || '').join('') || '';
             const clean = text.replace(/```json|```/g, '').trim();
             
@@ -362,7 +368,8 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
             setFactoryItems(items);
           } catch (apiErr) {
             console.error('Error API:', apiErr);
-            alert('Error al procesar el archivo con IA. Si es Excel, usa el formato .xlsx directamente.');
+            const msg = apiErr instanceof Error ? apiErr.message : String(apiErr);
+            alert(`Error al procesar el archivo con IA:\n${msg}\n\nSi es Excel, usa el formato .xlsx directamente.`);
           }
           setIsLoading(false);
         };
@@ -1195,3 +1202,4 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
     </div>
   );
 };
+
