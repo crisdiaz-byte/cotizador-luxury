@@ -442,12 +442,19 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
   // Total costos = Fábrica + Instalación + Andamios + Comisiones + Viáticos
   const totalCostos = calculateTotalFactoryCost() + totalExtras + viaticos;
 
-  // Precio al cliente = Total costos ÷ (1 - % utilidad)
-  const subtotalCliente = markup < 100 ? totalCostos / (1 - markup / 100) : totalCostos * 2;
+  // Precio al cliente = Total costos × (1 + % utilidad)  (markup sobre costo, igual que el Excel manual)
+  const subtotalCliente = totalCostos * (1 + markup / 100);
   const subtotalConExtras = subtotalCliente; // compatibilidad
 
   // Precio por partida (distribuido proporcionalmente al costo de fábrica)
   const totalFabrica = calculateTotalFactoryCost();
+
+  // Precio por partida = (fábrica + parte de extras + parte de viáticos) × (1 + % utilidad)
+  const precioCalculadoPartida = (item: any) => {
+    const n = selectedItems.length || 1;
+    const costoPartida = item.costoBase * item.cantidad + extraPerItem + viaticos / n;
+    return costoPartida * (1 + markup / 100);
+  };
 
   // Descuento sobre precio al cliente
   const descuentoMonto = subtotalCliente * (descuentoPct / 100);
@@ -506,10 +513,9 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
     const totalFabricaPDF = calculateTotalFactoryCost();
     const tableData = selectedItems.map((item, idx) => {
       // Precio por partida proporcional al costo de fábrica
-      const proporcion = totalFabricaPDF > 0 ? item.costoBase / totalFabricaPDF : 1 / selectedItems.length;
       const precioPartida = item.precioVentaManual !== undefined 
         ? item.precioVentaManual 
-        : subtotalCliente * proporcion;
+        : precioCalculadoPartida(item);
       
       // Extraer datos del item — buscar en measurements si no viene del item directamente
       const ubicacion = (item as any).ubicacion || '-';
@@ -738,7 +744,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
     const totalConIVA = (subtotalConExtras - descuentoMonto) + iva16 + viaticos;
 
     const partidas = selectedItems.map((item, idx) => {
-      const basePrice = item.precioVentaManual !== undefined ? item.precioVentaManual : item.precioVenta;
+      const basePrice = item.precioVentaManual !== undefined ? item.precioVentaManual : precioCalculadoPartida(item);
       // Cliente no ve extras internos
       return {
         'No': idx + 1,
@@ -748,9 +754,9 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
         'Nombre Tela': (item as any).nombreTela || (item as any).modelo || '',
         'Color': (item as any).color || '',
         'Mecanismo': (item as any).ladoMecanismo || 'Derecho',
-        'Precio Unitario': basePrice,
+        'Precio Unitario': basePrice / (item.cantidad || 1),
         'Cantidad': item.cantidad,
-        'Subtotal': basePrice * item.cantidad
+        'Subtotal': basePrice
       };
     });
 
@@ -808,7 +814,7 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
             <input type="date" className="w-full p-2 bg-slate-50 border rounded-lg focus:ring-2 ring-blue-500" value={cotizacionFecha} onChange={e => setCotizacionFecha(e.target.value)} />
           </div>
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Margen de Utilidad ({markup}%)</label>
+            <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Utilidad sobre costo ({markup}%)</label>
             <input type="range" min="0" max="150" step="5" className="w-full accent-blue-600" value={markup} onChange={e => setMarkup(Number(e.target.value))} />
           </div>
         </div>
@@ -1202,4 +1208,3 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
     </div>
   );
 };
-
