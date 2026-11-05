@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { QuoteForm } from './components/QuoteForm';
 import { History } from './components/History';
@@ -31,12 +30,10 @@ const App: React.FC = () => {
       <header className="bg-white border-b sticky top-0 z-30 px-4 py-4 md:px-8 shadow-sm">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-xl">
-              P
-            </div>
-            <div>
-              <h1 className="font-bold text-lg leading-tight">Cotizador Pro</h1>
-              <p className="text-xs text-slate-500 uppercase tracking-widest font-semibold">Persianas & Cortinas</p>
+            <img src="/logo-hmg.png" alt="Home My God" className="h-12 w-auto" />
+            <div className="ml-2">
+              <h1 className="font-bold text-lg leading-tight">Home My God</h1>
+              <p className="text-xs text-slate-500 uppercase tracking-widest font-semibold">Persianas, Cortinas & Toldos</p>
             </div>
           </div>
           
