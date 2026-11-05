@@ -172,36 +172,8 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
   const [categoria, setCategoria] = useState<Categoria>('persianas');
   const tiposActuales = TIPOS_POR_CATEGORIA[categoria];
 
-  // Marca personalizable
-  const [brand, setBrand] = useState<Brand>(() => {
-    try { return { ...BRAND_DEFAULT, ...JSON.parse(localStorage.getItem('cotizador_brand') || '{}') }; }
-    catch { return BRAND_DEFAULT; }
-  });
-  const updateBrand = (changes: Partial<Brand>) => {
-    setBrand(prev => {
-      const next = { ...prev, ...changes };
-      try { localStorage.setItem('cotizador_brand', JSON.stringify(next)); } catch {}
-      return next;
-    });
-  };
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, 500 / img.width);
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height);
-        updateBrand({ logo: canvas.toDataURL('image/png') });
-      };
-      img.src = reader.result as string;
-    };
-    reader.readAsDataURL(file);
-  };
+  // Marca fija: Home My God
+  const brand: Brand = BRAND_DEFAULT;
 
   // Concepto libre / accesorio (manivela, motor, servicio...)
   const [libreConcepto, setLibreConcepto] = useState('');
@@ -920,41 +892,6 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
             {categoria === 'libre' && <p className="text-[11px] text-slate-400 mt-2">Modo libre: agrega conceptos con su costo en el paso 3 (la utilidad se aplica igual).</p>}
           </div>
         </div>
-
-        <details className="mt-6 border border-slate-200 rounded-xl p-4 bg-slate-50">
-          <summary className="text-xs font-bold text-slate-600 cursor-pointer">🎨 Personalizar marca (nombre, logo y contacto)</summary>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Nombre del negocio</label>
-              <input className="w-full p-2 bg-white border rounded-lg" value={brand.nombre} onChange={e => updateBrand({ nombre: e.target.value })} />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Prefijo de folio</label>
-              <input className="w-full p-2 bg-white border rounded-lg" value={brand.prefijo} onChange={e => updateBrand({ prefijo: e.target.value.toUpperCase() })} />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Contacto / vendedor</label>
-              <input className="w-full p-2 bg-white border rounded-lg" value={brand.vendedor} onChange={e => updateBrand({ vendedor: e.target.value })} />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">WhatsApp</label>
-              <input className="w-full p-2 bg-white border rounded-lg" value={brand.whatsapp} onChange={e => updateBrand({ whatsapp: e.target.value })} />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Sitio web</label>
-              <input className="w-full p-2 bg-white border rounded-lg" value={brand.web} onChange={e => updateBrand({ web: e.target.value })} />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1">Logo (PNG/JPG)</label>
-              <div className="flex items-center gap-3">
-                <input type="file" accept="image/png,image/jpeg,image/webp" className="text-xs" onChange={handleLogoUpload} />
-                {brand.logo && <img src={brand.logo} alt="Logo" className="h-10 border rounded bg-white" />}
-                {brand.logo && <button type="button" className="text-[10px] text-red-500 font-bold" onClick={() => updateBrand({ logo: '' })}>Quitar</button>}
-              </div>
-            </div>
-          </div>
-          <p className="text-[10px] text-slate-400 mt-3">Se guarda en este navegador. Sin logo cargado se usa el de Home My God.</p>
-        </details>
       </section>
 
       {/* PASO 2: MEDIDAS */}
@@ -1341,4 +1278,3 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
     </div>
   );
 };
-
