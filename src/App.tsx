@@ -30,8 +30,7 @@ const App: React.FC = () => {
       <header className="bg-white border-b sticky top-0 z-30 px-4 py-4 md:px-8 shadow-sm">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/logo-hmg.png" alt="Home My God" className="h-12 w-auto" />
-            <div className="ml-2">
+            <div>
               <h1 className="font-bold text-lg leading-tight">Home My God</h1>
               <p className="text-xs text-slate-500 uppercase tracking-widest font-semibold">Persianas, Cortinas & Toldos</p>
             </div>
