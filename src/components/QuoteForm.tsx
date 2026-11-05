@@ -1341,3 +1341,4 @@ export const QuoteForm: React.FC<QuoteFormProps> = ({ onSaveHistory }) => {
     </div>
   );
 };
+
